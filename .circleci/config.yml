@@ -4,34 +4,44 @@ commands:
   destroy-environment:
     description: Destroy back-end and front-end cloudformation stacks given a workflow ID.
     parameters:
-      # Add parameter here   
+      # Add parameter here
+      workflow_id:
+        type: string
+        default: "${CIRCLE_WORKFLOW_ID}"
     steps:
       - run:
           name: Destroy environments
           when: on_fail
           command: |
-            # Your code here
-            exit 1
+            aws cloudformation delete-stack --stack-name UdaPeople-backend-${workflow_id:0:5}
+            aws cloudformation delete-stack --stack-name UdaPeople-frontend-${workflow_id:0:5}
+            aws s3 rb s3://UdaPeople-${workflow_id:0:5} --force
+            # exit 1
 
   revert-migrations:
     description: Revert the last migration if successfully run in the current workflow.
     parameters:
-      # Add parameter here     
+      # Add parameter here
+      workflow_id:
+        type: string
+        default: "${CIRCLE_WORKFLOW_ID}"
     steps:
       - run:
           name: Revert migrations
           # Add when this will run
           command: |
             # Curl command here to see if there was a successful migration associated with the workflow id, store result in SUCCESS variable
+            SUCCESS=$(curl --insecure https://kvdb.io/LenSAeevv3RGZnFLitxUTC/migration_${workflow_id:0:7})
             SUCCESS = 1
             if(( $SUCCESS==1 )); 
             then
-            #  cd ~/project/backend
-            #  npm install
-            #  Add revert code here. You can find this in the Getting Started section.
-              exit 1
+              cd ~/project/backend
+              npm install
+              # Add revert code here. You can find this in the Getting Started section.
+              npm run migrations:revert
+              # exit 1
             fi
-            
+
 jobs:
   build-frontend:
     docker:
@@ -44,6 +54,9 @@ jobs:
           name: Build front-end
           command: |
             # Your code here
+            cd frontend
+            npm i
+            npm run build
             exit 1
       - save_cache:
           paths: [frontend/node_modules]
@@ -59,8 +72,11 @@ jobs:
       - run:
           name: Back-end build
           command: |
-             # Your code here
-             exit 1
+            # Your code here
+            cd backend
+            npm i
+            npm run build
+            # exit 1
       - save_cache:
           paths: [backend/node_modules]
           key: backend-build
@@ -68,19 +84,30 @@ jobs:
   test-frontend:
     docker:
       # Docker image here
+      - image: circleci/node:13.8.0
     steps:
       # Checkout code from git
+      - checkout
       # Restore from cache
+      - restore_cache:
+        key:
+          - frontend-build
       # Your job code here
-                
+      - run:
+          name: frontend test
+          command: |
+          cd frontend
+          npm i
+          npm run test
   test-backend:
     docker:
       # Docker image here
+      
     steps:
       # Checkout code from git
       # Restore from cache
       # Your job code here
-            
+
   scan-frontend:
     docker:
       # Docker image here
@@ -129,7 +156,7 @@ jobs:
           root: ~/
           paths:
             - project/.circleci/ansible/inventory.txt
-      # Here's where you will add some code to rollback on failure      
+      # Here's where you will add some code to rollback on failure
 
   configure-infrastructure:
     docker:
@@ -148,7 +175,7 @@ jobs:
           command: |
             # Your code here
             exit 1
-      # Here's where you will add some code to rollback on failure      
+      # Here's where you will add some code to rollback on failure
 
   run-migrations:
     docker:
@@ -165,7 +192,7 @@ jobs:
           command: |
             # Your code here
             exit 1
-     # Here's where you will add some code to rollback on failure      
+      # Here's where you will add some code to rollback on failure
 
   deploy-frontend:
     docker:
@@ -186,8 +213,8 @@ jobs:
           name: Deploy frontend objects
           command: |
             # your code here
-      # Here's where you will add some code to rollback on failure      
-                    
+      # Here's where you will add some code to rollback on failure
+
   deploy-backend:
     docker:
       # Docker image here that supports Ansible
@@ -203,11 +230,11 @@ jobs:
           name: Deploy backend
           command: |
             # your code here
-      # Here's where you will add some code to rollback on failure  
+      # Here's where you will add some code to rollback on failure
 
   smoke-test:
     docker:
-      # Lightweight Docker image 
+      # Lightweight Docker image
     steps:
       # Checkout code from git
       - run:
@@ -226,7 +253,7 @@ jobs:
           name: Frontend smoke test.
           command: |
             # your code here
-      # Here's where you will add some code to rollback on failure  
+      # Here's where you will add some code to rollback on failure
 
   cloudfront-update:
     docker:
@@ -241,27 +268,26 @@ jobs:
           name: Update cloudfront distribution
           command: |
             # your code here
-      # Here's where you will add some code to rollback on failure  
+      # Here's where you will add some code to rollback on failure
 
 cleanup:
-    docker:
-      # Docker image here
-    steps:
-      # Checkout code from git
-      - run:
-          name: Get old stack workflow id
-          command: |
+  docker:
+    # Docker image here
+  steps:
+    # Checkout code from git
+    - run:
+        name: Get old stack workflow id
+        command: |
+          # your code here
+          export OldWorkflowID="the id here"
+          export STACKS=[] #put the list of stacks here
+    - run:
+        name: Remove old stacks and files
+        command: |
+          if [[ "${STACKS[@]}" =~ "${OldWorkflowID}" ]]
+          then
             # your code here
-            export OldWorkflowID="the id here"
-            export STACKS=[] #put the list of stacks here
-      - run:
-          name: Remove old stacks and files
-          command: |
-            if [[ "${STACKS[@]}" =~ "${OldWorkflowID}" ]]
-            then
-              # your code here
-            fi
-            
+          fi
 
 workflows:
   default:

@@ -31,7 +31,7 @@ commands:
           # Add when this will run
           command: |
             # Curl command here to see if there was a successful migration associated with the workflow id, store result in SUCCESS variable
-            SUCCESS=$(curl --insecure https://kvdb.io/LenSAeevv3RGZnFLitxUTC/migration_${workflow_id:0:7})
+            SUCCESS=$(curl --insecure https://kvdb.io/LenSAeevv3RGZnFLitxUTC/migration_${workflow_id:0:5})
             SUCCESS = 1
             if(( $SUCCESS==1 )); 
             then
@@ -45,7 +45,7 @@ commands:
 jobs:
   build-frontend:
     docker:
-      - image: circleci/node:13.8.0
+      - image: cimg/node:13.8.0
     steps:
       - checkout
       - restore_cache:
@@ -64,7 +64,7 @@ jobs:
 
   build-backend:
     docker:
-      - image: circleci/node:13.8.0
+      - image: cimg/node:13.8.0
     steps:
       - checkout
       - restore_cache:
@@ -84,7 +84,7 @@ jobs:
   test-frontend:
     docker:
       # Docker image here
-      - image: circleci/node:13.8.0
+      - image: cimg/node:13.8.0
     steps:
       # Checkout code from git
       - checkout
@@ -102,7 +102,7 @@ jobs:
   test-backend:
     docker:
       # Docker image here
-      - image: circleci/node:13.8.0
+      - image: cimg/node:13.8.0
     steps:
       # Checkout code from git
       - checkout
@@ -121,7 +121,7 @@ jobs:
   scan-frontend:
     docker:
       # Docker image here
-      - image: circleci/node:13.8.0
+      - image: cimg/node:13.8.0
     steps:
       # Checkout code from git
       - checkout
@@ -141,7 +141,7 @@ jobs:
   scan-backend:
     docker:
       # Docker image here
-      - image: circleci/node:13.8.0
+      - image: cimg/node:13.8.0
     steps:
       # Checkout code from git
       - checkout
@@ -172,8 +172,8 @@ jobs:
             aws cloudformation deploy \
               --template-file .circleci/files/backend.yml \
               --tags project=your-tag \
-              --stack-name "your back-end stack name with workflow id" \
-              --parameter-overrides ID="your workflow id"  
+              --stack-name ${workflow_id:0:5} \
+              --parameter-overrides ID=${workflow_id:0:5}  
               # exit 1
       - run:
           name: Ensure front-end infrastructure exist
@@ -181,8 +181,8 @@ jobs:
             aws cloudformation deploy \
               --template-file .circleci/files/frontend.yml \
               --tags project=your-tag \
-              --stack-name "your front-end stack name with workflow id" \
-              --parameter-overrides ID="your workflow id"  
+              --stack-name ${workflow_id:0:5} \
+              --parameter-overrides ID=${workflow_id:0:5}  
               # exit 1
       - run:
           name: Add back-end ip to ansible inventory
@@ -202,21 +202,31 @@ jobs:
   configure-infrastructure:
     docker:
       # Docker image here that supports Ansible
+      - image: python:3.7-alpine3.11
     steps:
       # Checkout code from git
+      - checkout
       # Add ssh keys with fingerprint
+        - add_ssh_keys:
+          fingerprints: ["5d:10:35:72:f0:59:b4:82:3a:3f:0e:0b:c3:1d:01:4f"]
       # attach workspace
+      - attach_workspace:
+          at: .
       - run:
           name: Install dependencies
           command: |
             # Your code here
-            exit 1
+            apk add --update ansible -y
+            pip install awscli -y
+            # exit 1
       - run:
           name: Configure server
           command: |
             # Your code here
-            exit 1
+            ansible-playbook -i project/.circleci/ansible/inventory.txt ./.circleci/ansible/configure-server.yml
+            # exit 1
       # Here's where you will add some code to rollback on failure
+      - destroy-environment
 
   run-migrations:
     docker:

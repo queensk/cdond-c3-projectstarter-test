@@ -141,10 +141,23 @@ jobs:
   scan-backend:
     docker:
       # Docker image here
+      - image: circleci/node:13.8.0
     steps:
       # Checkout code from git
+      - checkout
       # Restore from cache
+      - restore_cache:
+          keys:
+            - backend-build
       # Your job code here
+      - run:
+          name: scan backend
+          command: |
+            cd backend
+            npm i
+            npm audit fix --audit-level=critical --force
+            npm audit fix --force
+            npm audit --audit-level=critical
 
   deploy-infrastructure:
     docker:

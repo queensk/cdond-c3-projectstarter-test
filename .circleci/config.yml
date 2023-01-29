@@ -207,7 +207,7 @@ jobs:
       # Checkout code from git
       - checkout
       # Add ssh keys with fingerprint
-        - add_ssh_keys:
+      - add_ssh_keys:
           fingerprints: ["5d:10:35:72:f0:59:b4:82:3a:3f:0e:0b:c3:1d:01:4f"]
       # attach workspace
       - attach_workspace:

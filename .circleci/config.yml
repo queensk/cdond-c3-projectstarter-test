@@ -311,42 +311,91 @@ jobs:
   deploy-backend:
     docker:
       # Docker image here that supports Ansible
+      - image: python:3.7-alpine3.11
     steps:
       # Checkout code from git
+      - checkout
       # Add ssh keys with fingerprint
+      - add_ssh_keys:
+          fingerprints: [31:9c:ea:d6:47:7b:6f:55:ba:1a:5e:f1:67:0b:1c:87]
       # attach workspace
+      - attach_workspace:
+          at: .
       - run:
           name: Install dependencies
           command: |
             # your code here
+            apk add --update ansible -y
+            pip install awscli -y
       - run:
           name: Deploy backend
           command: |
             # your code here
+            cd backend/
+            echo ENVIROMENT=production > ".env"
+            echo TYPEORM_CONNECTION=$TYPEORM_CONNECTION >> ".env"
+            echo TYPEORM_MIGRATIONS_DIR=$TYPEORM_MIGRATIONS_DIR >> ".env"
+            echo TYPEORM_ENTITIES=$TYPEORM_ENTITIES >> ".env"
+            echo TYPEORM_MIGRATIONS=$TYPEORM_MIGRATIONS >> ".env"
+            echo TYPEORM_HOST=$TYPEORM_HOST >> ".env"
+            echo TYPEORM_PORT=$TYPEORM_PORT >> ".env"
+            echo TYPEORM_USERNAME=$TYPEORM_USERNAME >> ".env"
+            echo TYPEORM_PASSWORD=$TYPEORM_PASSWORD >> ".env"
+            echo TYPEORM_DATABASE=$TYPEORM_DATABASE >> ".env"
+            tar -cvf backend.tar backend/
+            ansible-playbook -i project/.circleci/ansible/inventory.txt ./.circleci/ansible/deploy-backend.yml -vvv
       # Here's where you will add some code to rollback on failure
+      - revert-migrations
+      - destroy-environment
 
   smoke-test:
     docker:
       # Lightweight Docker image
+      - image: python:3.7-alpine3.11
     steps:
       # Checkout code from git
+      - checkout
       - run:
           name: Install dependencies
           command: |
             # your code here
+            apk add --update curl
+            pip install awscli
       - run:
           name: Get backend url
           command: |
             # your code here
+            BACKEND_IP=$(aws ec2 describe-instances \
+                  --filters Name=tag:Name,Values=backend-${CIRCLE_WORKFLOW_ID:0:7} Name=instance-state-name,Values=running \
+                  --query Reservations[*].Instances[*].PublicIpAddress \
+                  --no-paginate \
+                  --output text)
+            echo ${BACKEND_IP}
+            export API_URL="http://${BACKEND_IP}:3030"
+            echo ${API_URL}
       - run:
           name: Backend smoke test.
           command: |
             # your code here
+            if curl "${API_URL}/api/status" | grep "ok"
+            then
+                return 0
+            else
+                return 1
+            fi
       - run:
           name: Frontend smoke test.
           command: |
             # your code here
+            if curl -s ${URL} | grep "Welcome"
+            then
+              return 0
+            else
+              return 1
+            fi
       # Here's where you will add some code to rollback on failure
+      - revert-migrations
+      - destroy-environment
 
   cloudfront-update:
     docker:

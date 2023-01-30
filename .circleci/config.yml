@@ -24,7 +24,7 @@ commands:
       # Add parameter here
       workflow_id:
         type: string
-        default: "${CIRCLE_WORKFLOW_ID}"
+        default: "${workflow_id}"
     steps:
       - run:
           name: Revert migrations
@@ -57,7 +57,7 @@ jobs:
             cd frontend
             npm i
             npm run build
-            exit 1
+            # exit 1
       - save_cache:
           paths: [frontend/node_modules]
           keys: frontend-build
@@ -285,10 +285,10 @@ jobs:
           command: |
             # your code here
             BACKEND_IP=$(aws ec2 describe-instances \
-                  --filters Name=tag:Name,Values=backend-${workflow_id:0:5} Name=instance-state-name,Values=running \
-                  --query Reservations[*].Instances[*].PublicIpAddress \
-                  --no-paginate \
-                  --output text)
+              --filters Name=tag:Name,Values=backend-${workflow_id:0:5} Name=instance-state-name,Values=running \
+              --query Reservations[*].Instances[*].PublicIpAddress \
+              --no-paginate \
+              --output text)
             API_URL="http://${BACKEND_IP}:3030"
             echo "${API_URL}"
             echo API_URL="http://${BACKEND_IP}:3030" >> frontend/.env
@@ -303,7 +303,7 @@ jobs:
           name: Deploy frontend objects
           command: |
             # your code here
-            aws s3 sync ./frontend/dist s3://"udapeople-${workflow_id:0:5}" --debug
+            aws s3 sync ./frontend/dist s3://"UdaPeople-${workflow_id:0:5}" --debug
       # Here's where you will add some code to rollback on failure
       - revert-migrations
       - destroy-environment
@@ -366,10 +366,10 @@ jobs:
           command: |
             # your code here
             BACKEND_IP=$(aws ec2 describe-instances \
-                  --filters Name=tag:Name,Values=backend-${CIRCLE_WORKFLOW_ID:0:7} Name=instance-state-name,Values=running \
-                  --query Reservations[*].Instances[*].PublicIpAddress \
-                  --no-paginate \
-                  --output text)
+              --filters Name=tag:Name,Values=backend-${CIRCLE_WORKFLOW_ID:0:7} Name=instance-state-name,Values=running \
+              --query Reservations[*].Instances[*].PublicIpAddress \
+              --no-paginate \
+              --output text)
             echo ${BACKEND_IP}
             export API_URL="http://${BACKEND_IP}:3030"
             echo ${API_URL}
@@ -456,9 +456,9 @@ cleanup:
           if [[ "${STACKS[@]}" =~ "${OldWorkflowID}" ]]
           then
             # your code here
-            aws cloudformation delete-stack --stack-name "udapeople-backend-${OldWorkflowID}"
-            aws s3 rm "s3://udapeople-${OldWorkflowID}" --recursive
-            aws cloudformation delete-stack --stack-name "udapeople-frontend-${OldWorkflowID}"
+            aws cloudformation delete-stack --stack-name "UdaPeople-backend-${OldWorkflowID}"
+            aws s3 rm "s3://UdaPeople-${OldWorkflowID}" --recursive
+            aws cloudformation delete-stack --stack-name "UdaPeople-frontend-${OldWorkflowID}"
           fi
 
 workflows:

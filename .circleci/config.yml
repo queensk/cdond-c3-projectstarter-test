@@ -234,17 +234,13 @@ jobs:
       - image: cimg/node:13.8.0
     steps:
       # Checkout code from git
+      - checkout
       - run:
           name: Run migrations
           command: |
             # Your code here
             sudo apt-get update
             sudo apt-get install awscli -y
-            # exit 1
-      - run:
-          name: Send migration results to memstash
-          command: |
-            # Your code here
             cd backend
             echo ENVIROMENT=production > ".env"
             echo TYPEORM_CONNECTION=$TYPEORM_CONNECTION >> ".env"
@@ -262,28 +258,55 @@ jobs:
             npm run migrations > ~/project/backend/migrations_dump.txt
             # cat migrations_dump.txt
             # exit 1
+      - run:
+          name: Send migration results to kvdb
+          command: |
+            # Your code here
+            curl --insecure https://kvdb.io/LenSAeevv3RGZnFLitxUTC/migration_${workflow_id:0:5}  -d '1'
+            # exit 1
       # Here's where you will add some code to rollback on failure
+      - destroy-environment
 
   deploy-frontend:
     docker:
       # Docker image here that supports AWS CLI
+      - image: amazon/aws-cli
     steps:
       # Checkout code from git
       - run:
           name: Install dependencies
           command: |
             # your code here
+            yum -y install tar gzip jq npm
+            curl -sL https://rpm.nodesource.com/setup_13.8.0 | bash -
+            yum -y install nodejs
       - run:
           name: Get backend url
           command: |
             # your code here
-            export API_URL="http://${BACKEND_IP}:3030"
+            BACKEND_IP=$(aws ec2 describe-instances \
+                  --filters Name=tag:Name,Values=backend-${workflow_id:0:5} Name=instance-state-name,Values=running \
+                  --query Reservations[*].Instances[*].PublicIpAddress \
+                  --no-paginate \
+                  --output text)
+            API_URL="http://${BACKEND_IP}:3030"
             echo "${API_URL}"
+            echo API_URL="http://${BACKEND_IP}:3030" >> frontend/.env
+            # cat frontend/.env
+            cd frontend
+            npm i
+            npm run build
+            npm audit fix --audit-level=critical --force
+            export API_URL="http://${BACKEND_IP}:3030"
+
       - run:
           name: Deploy frontend objects
           command: |
             # your code here
+            aws s3 sync ./frontend/dist s3://"udapeople-${workflow_id:0:5}" --debug
       # Here's where you will add some code to rollback on failure
+      - revert-migrations
+      - destroy-environment
 
   deploy-backend:
     docker:

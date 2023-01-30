@@ -433,16 +433,18 @@ cleanup:
     - image: amazon/aws-cli
   steps:
     # Checkout code from git
-    - checkout
-    - attach_workspace:
-          at: ~/
+    - checkout:
+        path: ~/
     - run:
         name: Get old stack workflow id
         command: |
           # your code here
           yum -y install tar gzip
-          export OldWorkflowID=$(aws cloudformation list-exports --query "Exports[?Name==\`WorkflowID\`].Value" --no-paginate --output text)
-          echo OldWorkflowID: "${OldWorkflowID}"
+          export OldWorkflowID=$(aws cloudformation list-exports \
+            --query "Exports[?Name==\`WorkflowID\`].Value" \
+            --no-paginate \
+            --output text)
+          echo "OldWorkflowID: ${OldWorkflowID}"
          # Export the list of stacks into an array
           export STACKS=$(aws cloudformation list-stacks \
             --query "StackSummaries[*].StackName" \

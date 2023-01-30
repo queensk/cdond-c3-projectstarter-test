@@ -419,6 +419,10 @@ jobs:
               --no-paginate \
               --output text)
             echo "Old Workflow ID: $OLD_WORKFLOW_ID"
+            aws cloudformation update-stack \
+              --use-previous-template \
+              --stack-name InitialStack \
+              --parameters ParameterKey=WorkflowID,ParameterValue=${WORKFLOW_ID:0:5},UsePreviousValue=false
       # Here's where you will add some code to rollback on failure
       - revert-migrations
       - destroy-environment

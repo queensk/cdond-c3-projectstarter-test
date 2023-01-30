@@ -400,29 +400,53 @@ jobs:
   cloudfront-update:
     docker:
       # Docker image here that supports AWS CLI
+      - image: amazon/aws-cli
     steps:
       # Checkout code from git
+      - checkout
       - run:
           name: Install dependencies
           command: |
             # your code here
+            yum -y install tar gzip
       - run:
           name: Update cloudfront distribution
           command: |
             # your code here
+            export OLD_WORKFLOW_ID=$(aws cloudformation list-exports \
+              --query "Exports[?Name==\`WorkflowID\`].Value" \
+              --region us-east-1 \
+              --no-paginate \
+              --output text)
+            echo "Old Workflow ID: $OLD_WORKFLOW_ID"
       # Here's where you will add some code to rollback on failure
+      - revert-migrations
+      - destroy-environment
 
 cleanup:
   docker:
     # Docker image here
+    - image: amazon/aws-cli
   steps:
     # Checkout code from git
+    - checkout
     - run:
         name: Get old stack workflow id
         command: |
           # your code here
-          export OldWorkflowID="the id here"
-          export STACKS=[] #put the list of stacks here
+          yum -y install tar gzip
+          export OLD_WORKFLOW_ID=$(aws cloudformation list-exports \
+              --query "Exports[?Name==\`WorkflowID\`].Value" 
+              --region us-east-1 \
+              --no-paginate \
+              --output text)
+          echo "Old Workflow ID: $OLD_WORKFLOW_ID"
+         # Export the list of stacks into an array
+        export STACKS=($(aws cloudformation list-stacks \
+          --output text \
+          --region us-east-1 \
+          --query 'StackSummaries[?(!contains(StackStatus,`DELETE`))].StackName'))
+
     - run:
         name: Remove old stacks and files
         command: |

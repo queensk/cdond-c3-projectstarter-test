@@ -445,7 +445,7 @@ cleanup:
             --no-paginate \
             --output text)
           echo "OldWorkflowID: ${OldWorkflowID}"
-         # Export the list of stacks into an array
+          # Export the list of stacks into an array
           export STACKS=$(aws cloudformation list-stacks \
             --query "StackSummaries[*].StackName" \
             --stack-status-filter CREATE_COMPLETE \

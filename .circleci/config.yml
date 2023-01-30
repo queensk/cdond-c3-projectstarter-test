@@ -429,7 +429,7 @@ jobs:
 
   cleanup:
     docker:
-      # Docker image here
+      # Docker image here that supports AWS CLI
       - image: amazon/aws-cli
     steps:
       # Checkout code from git
@@ -452,16 +452,16 @@ jobs:
               --no-paginate \
               --output text)
 
-    - run:
-        name: Remove old stacks and files
-        command: |
-          if [[ "${STACKS[@]}" =~ "${OldWorkflowID}" ]]
-          then
-            # your code here
-            aws cloudformation delete-stack --stack-name "UdaPeople-backend-${OldWorkflowID}"
-            aws s3 rm "s3://UdaPeople-${OldWorkflowID}" --recursive
-            aws cloudformation delete-stack --stack-name "UdaPeople-frontend-${OldWorkflowID}"
-          fi
+      - run:
+          name: Remove old stacks and files
+          command: |
+            if [[ "${STACKS[@]}" =~ "${OldWorkflowID}" ]]
+            then
+              # your code here
+              aws cloudformation delete-stack --stack-name "UdaPeople-backend-${OldWorkflowID}"
+              aws s3 rm "s3://UdaPeople-${OldWorkflowID}" --recursive
+              aws cloudformation delete-stack --stack-name "UdaPeople-frontend-${OldWorkflowID}"
+            fi
 
 workflows:
   default:

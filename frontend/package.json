@@ -60,7 +60,7 @@
     "ts-jest": "^29.0.5",
     "ts-loader": "^6.0.4",
     "tslint": "^5.18.0",
-    "typescript": "^3.5.3",
+    "typescript": "^3.9.10",
     "url-loader": "^2.0.1",
     "webpack": "^5.75.0",
     "webpack-cleanup-plugin": "^0.5.1",
